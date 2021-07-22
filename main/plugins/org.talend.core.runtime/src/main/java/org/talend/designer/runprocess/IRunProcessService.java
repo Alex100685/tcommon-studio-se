@@ -271,5 +271,7 @@ public interface IRunProcessService extends IService {
     
     void deleteTalendCodesJarProject(ERepositoryObjectType type, String projectTechName, String codesJarName,
             boolean deleteContent);
+    
+    public void deleteOldVersionTalendJobProject(String id, String version);
 
 }

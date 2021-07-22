@@ -565,4 +565,8 @@ public interface IProxyRepositoryFactory {
 
     public void batchDeleteObjectPhysical4Remote(Project project, List<IRepositoryViewObject> objToDeleteList)
             throws PersistenceException;
+    
+    public void deleteOldVersionPhysical(Project project, IRepositoryViewObject objToDelete, String version) throws PersistenceException;
+    
+    public void batchDeleteOldVersionPhysical4Remote(Project project, List<IRepositoryViewObject> objToDeleteList) throws PersistenceException;
 }

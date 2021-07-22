@@ -2784,4 +2784,76 @@ public final class ProxyRepositoryFactory implements IProxyRepositoryFactory {
             }
         }
     }
+    
+    @Override
+    public void deleteOldVersionPhysical(Project project, IRepositoryViewObject objToDelete, String version) throws PersistenceException {
+        if (project == null || objToDelete == null || objToDelete.getProperty() == null) {
+            return;
+        }
+        // RepositoryViewObject is dynamic, so force to use in all case the RepositoryObject with fixed object.
+        IRepositoryViewObject object = new RepositoryObject(objToDelete.getProperty());
+
+        ERepositoryObjectType repositoryObjectType = object.getRepositoryObjectType();
+
+        ICoreService coreService = getCoreService();
+        if (coreService != null) {
+            if (repositoryObjectType == ERepositoryObjectType.PROCESS) {
+                // delete the job launch, for bug 8878
+                coreService.removeJobLaunch(object);
+            }
+        }
+        
+        if (GlobalServiceRegister.getDefault().isServiceRegistered(IRunProcessService.class)) {
+            IRunProcessService service = GlobalServiceRegister.getDefault()
+                    .getService(IRunProcessService.class);
+            service.deleteOldVersionTalendJobProject(object.getProperty().getId(), version);
+        }
+
+        this.repositoryFactoryFromProvider.deleteObjectPhysical(project, object, version, true);
+        
+        // i18n
+        //log.info("Physical deletion [" + objToDelete + "] by " + getRepositoryContext().getUser() + ".");
+        String str[] = new String[] { object.toString()+ "_" + version, getRepositoryContext().getUser().toString() };
+        log.info(Messages.getString("ProxyRepositoryFactory.log.physicalDeletion", str)); //$NON-NLS-1$    }
+    }
+    
+    @Override
+    public void batchDeleteOldVersionPhysical4Remote(Project project, List<IRepositoryViewObject> objToDeleteList) throws PersistenceException {
+        if (project == null || objToDeleteList == null || objToDeleteList.size() == 0) {
+            return;
+        }
+
+        List<String> idList = new ArrayList<>();
+        List<IRepositoryViewObject> repositoryObjectList = new ArrayList<>();
+        for (IRepositoryViewObject objToDelete : objToDeleteList) {
+            IRepositoryViewObject object = new RepositoryObject(objToDelete.getProperty());
+            boolean isExtendPoint = false;
+
+            idList.add(object.getProperty().getId());
+            ERepositoryObjectType repositoryObjectType = object.getRepositoryObjectType();
+
+            ICoreService coreService = getCoreService();
+            if (coreService != null) {
+                if (repositoryObjectType == ERepositoryObjectType.PROCESS) {
+                    // delete the job launch, for bug 8878
+                    coreService.removeJobLaunch(object);
+                }
+            }
+
+            repositoryObjectList.add(object);
+            
+            if (GlobalServiceRegister.getDefault().isServiceRegistered(IRunProcessService.class)) {
+                IRunProcessService service = GlobalServiceRegister.getDefault()
+                        .getService(IRunProcessService.class);
+                service.deleteOldVersionTalendJobProject(object.getProperty().getId(), object.getProperty().getVersion());
+            }
+        }
+
+        
+        this.repositoryFactoryFromProvider.batchDeleteOldVersionsPhysical(project, objToDeleteList, true);
+
+        // save project will handle git/svn update
+        this.repositoryFactoryFromProvider.saveProject(project);
+    }
+    
 }
