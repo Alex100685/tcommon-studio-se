@@ -4498,7 +4498,13 @@ public class DatabaseForm extends AbstractForm {
             
             if( !"".equals( metadataConn.getPassword() ) ) {
                 String url = metadataConn.getUrl().replace(";auth=noSasl", "");
-                url = url + ";user=" + metadataConn.getUsername() + ";password=" + metadataConn.getPassword();
+
+                if (url.startsWith("jdbc:hive2")) {
+                    url = url + ";user=" + metadataConn.getUsername() + ";password=" + metadataConn.getPassword();
+                } else {
+                    url = url + ";AuthMech=3;UID=" + metadataConn.getUsername() + ";PWD=" + metadataConn.getPassword();
+                }
+                
                 metadataConn.setUrl(url);
             }
             
