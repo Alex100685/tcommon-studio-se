@@ -121,13 +121,7 @@ public class CreateMavenStandardJobOSGiPom extends CreateMavenJobPom {
 					List<Plugin> plugins = profile.getBuild().getPlugins();
 					for (Plugin plugin : plugins) {
 						if ("osgihelper-maven-plugin".equals(plugin.getArtifactId())) {
-							String talendVersion = VersionUtils.getTalendVersion();
-							String productVersion = VersionUtils.getInternalVersion();
-							if (productVersion.endsWith("-SNAPSHOT") || CommonsPlugin.isJUnitTest() //$NON-NLS-1$
-									|| Platform.inDevelopmentMode()) {
-								talendVersion += "-SNAPSHOT"; //$NON-NLS-1$
-							}
-							plugin.setVersion(talendVersion);
+							plugin.setVersion(VersionUtils.getMojoVersion());
 							break;
 						}
 					}
