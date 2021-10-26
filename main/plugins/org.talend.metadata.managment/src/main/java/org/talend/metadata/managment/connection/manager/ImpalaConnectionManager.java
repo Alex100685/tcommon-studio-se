@@ -70,9 +70,24 @@ public class ImpalaConnectionManager extends DataBaseConnectionManager {
             @Override
             public Connection call() throws Exception {
                 Connection conn = null;
+                
+                if( !"".equals( metadataConn.getPassword() ) ) {
+                    String url = metadataConn.getUrl().replace(";auth=noSasl", "");
+
+                    if (url.startsWith("jdbc:hive2")) {
+                        url = url + ";user=" + metadataConn.getUsername() + ";password=" + metadataConn.getPassword();
+                    } else {
+                        url = url + ";AuthMech=3;UID=" + metadataConn.getUsername() + ";PWD=" + metadataConn.getPassword();
+                    }
+                    
+                    metadataConn.setUrl(url);
+                }
+                
+                
                 String connURL = metadataConn.getUrl();
                 String username = metadataConn.getUsername();
-                String password = metadataConn.getPassword();
+                String password = metadataConn.getPassword();                
+                
                 // 1. Get class loader.
                 ClassLoader currClassLoader = Thread.currentThread().getContextClassLoader();
                 ClassLoader impalaClassLoader = getClassLoader(metadataConn);
