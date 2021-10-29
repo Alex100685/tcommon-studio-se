@@ -243,7 +243,7 @@ public class PendoTrackSender {
             URL url = new URL(adminUrl);
             // tmc.int.cloud.talend.com
             String authority = url.getAuthority();
-            String regex = "(\\w*\\W*\\w*\\.?){2}\\.(talend.com)";
+            String regex = "(\\w*\\-*\\w*\\.?){2}\\.(talend.com)";
             Pattern  pattern= Pattern.compile(regex);
             Matcher match = pattern.matcher(authority);
             if (match.find()) {
