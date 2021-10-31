@@ -107,7 +107,7 @@ public class PendoTrackSender {
     }
 
     public void sendTrackData() throws Exception {
-        if (!NetworkUtil.isNetworkValid() || !checkTokenUsed(adminUrl)) {
+        if (!checkTokenUsed(adminUrl) || !NetworkUtil.isNetworkValid()) {
             return;
         }
 
@@ -198,7 +198,6 @@ public class PendoTrackSender {
             client = HttpClients.createDefault();
             String url = getBaseUrl() + PENDO_INFO;
 
-
             HttpGet httpGet = new HttpGet(url);
             httpGet.setHeader(HEAD_AUTHORIZATION, "Bearer " + getToken());
             response = client.execute(httpGet, HttpClientContext.create());
@@ -234,7 +233,7 @@ public class PendoTrackSender {
         return false;
     }
 
-    private String getBaseUrl() throws Exception {
+    public String getBaseUrl() throws Exception {
         if (StringUtils.isNotBlank(apiBaseUrl)) {
             return apiBaseUrl;
         }
@@ -278,6 +277,14 @@ public class PendoTrackSender {
         RepositoryContext repositoryContext = (RepositoryContext) CoreRuntimePlugin.getInstance().getContext()
                 .getProperty(Context.REPOSITORY_CONTEXT_KEY);
         return repositoryContext;
+    }
+
+    public void setAdminUrl(String adminUrl) {
+        PendoTrackSender.adminUrl = adminUrl;
+    }
+
+    public void setApiBaseUrl(String apiBaseUrl) {
+        PendoTrackSender.apiBaseUrl = apiBaseUrl;
     }
 
 }
