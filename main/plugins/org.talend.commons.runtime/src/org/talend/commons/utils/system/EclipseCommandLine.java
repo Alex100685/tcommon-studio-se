@@ -21,10 +21,13 @@
 // ============================================================================
 package org.talend.commons.utils.system;
 
+import java.io.StringReader;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Platform;
+import org.talend.commons.exception.ExceptionHandler;
 
 /**
  * Creates and updates properties for the eclipse commandline in case of relaunch <br/>
@@ -55,7 +58,7 @@ public class EclipseCommandLine {
      */
     static public final String TALEND_PROJECT_TYPE_COMMAND = "-talendProjectType"; //$NON-NLS-1$
 
-    static public final String TALEND_LICENCE_PATH = "talend.licence.path"; //$NON-NLS-1$
+    static public final String TALEND_LICENCE_PATH = "talendLicensePath"; //$NON-NLS-1$
 
     static public final String ARG_TALEND_LICENCE_PATH = "-" + TALEND_LICENCE_PATH; //$NON-NLS-1$
 
@@ -76,9 +79,9 @@ public class EclipseCommandLine {
 
     static public final String LOGIN_ONLINE_UPDATE = "--loginOnlineUpdate";
 
-    static public final String ARG_TALEND_BUNDLES_CLEANED = "-talend.studio.bundles.cleaned"; //$NON-NLS-1$
+    static public final String ARG_TALEND_BUNDLES_CLEANED = "-talendStudioBundlesCleaned"; //$NON-NLS-1$
 
-    static public final String PROP_TALEND_BUNDLES_DO_CLEAN = "-talend.studio.bundles.doclean"; //$NON-NLS-1$
+    static public final String PROP_TALEND_BUNDLES_DO_CLEAN = "-talendStudioBundlesDoclean"; //$NON-NLS-1$
 
     /**
      * for relaunch of the plugins when relaunching the Studio
@@ -191,9 +194,8 @@ public class EclipseCommandLine {
                                 + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE)
                                 + currentProperty.substring(indexOfVmArgs);
                     } else {// vmargs command not found so don't know where to set it to throw Exception
-                        throw new IllegalArgumentException("the property :"
-                                + org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY + "must constain "
-                                + EclipseCommandLine.CMD_VMARGS);
+                        currentProperty = currentProperty + command + EclipseCommandLine.NEW_LINE + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE);
+                        //                        throw new IllegalArgumentException("the property :" + org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY + "must constain " + EclipseCommandLine.CMD_VMARGS);
                     }
                 }
             }
@@ -262,6 +264,38 @@ public class EclipseCommandLine {
                 result.append(vmargs);
             }
         }
-        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY, result.toString());
+        
+        String exitData = removeDuplicated(result).toString();
+        ExceptionHandler.log("exitData: " + exitData);
+//        Exception e = new Exception("exitData debug");
+//        ExceptionHandler.process(e);
+        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY, exitData);
+    }
+    
+    private static StringBuilder removeDuplicated(StringBuffer sb) {
+        StringBuilder ret = new StringBuilder();
+        StringTokenizer t = new StringTokenizer(sb.toString(), EclipseCommandLine.NEW_LINE);
+        while (t.hasMoreElements()) {
+            String ele = (String) t.nextElement();
+            boolean add = true;
+            if (ele.equals("-launcher")) {
+                if (ret.indexOf(ele) > 0) {
+                    // dump value of launcher
+                    t.nextElement();
+                    add = false;
+                }
+            } else if (ele.equals(EclipseCommandLine.CMD_VMARGS)) {
+                break;
+            }
+
+            if (add) {
+                ret.append(ele);
+                ret.append(EclipseCommandLine.NEW_LINE);
+            }
+
+        }
+        
+        return ret;
+
     }
 }
