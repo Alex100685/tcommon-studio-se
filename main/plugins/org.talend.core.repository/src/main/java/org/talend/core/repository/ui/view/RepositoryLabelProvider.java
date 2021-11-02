@@ -524,10 +524,6 @@ public class RepositoryLabelProvider extends LabelProvider implements IColorProv
     public Font getFont(Object element) {
         RepositoryNode node = (RepositoryNode) element;
         switch (node.getType()) {
-        case STABLE_SYSTEM_FOLDER:
-            if (node.getLabel().equals(ERepositoryObjectType.SNIPPETS.toString())) {
-                return JFaceResources.getFontRegistry().defaultFont();
-            }
         case SYSTEM_FOLDER:
             return JFaceResources.getFontRegistry().getBold(JFaceResources.DEFAULT_FONT);
         default:
