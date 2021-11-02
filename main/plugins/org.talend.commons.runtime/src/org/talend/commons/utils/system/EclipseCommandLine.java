@@ -21,11 +21,14 @@
 // ============================================================================
 package org.talend.commons.utils.system;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Platform;
+import org.talend.commons.exception.ExceptionHandler;
 
 /**
  * Creates and updates properties for the eclipse commandline in case of relaunch <br/>
@@ -42,6 +45,8 @@ public class EclipseCommandLine {
     static final String PROP_COMMANDS = "eclipse.commands"; //$NON-NLS-1$
 
     static final String CMD_VMARGS = "-vmargs"; //$NON-NLS-1$
+    
+    static final String CMD_VM = "-vm"; //$NON-NLS-1$
 
     static final String NEW_LINE = "\n"; //$NON-NLS-1$
 
@@ -77,9 +82,9 @@ public class EclipseCommandLine {
 
     static public final String LOGIN_ONLINE_UPDATE = "--loginOnlineUpdate";
 
-    static public final String ARG_TALEND_BUNDLES_CLEANED = "-talendStudioBundlesCleaned"; //$NON-NLS-1$
+    static public final String ARG_TALEND_BUNDLES_CLEANED = "-talend.studio.bundles.cleaned"; //$NON-NLS-1$
 
-    static public final String PROP_TALEND_BUNDLES_DO_CLEAN = "-talendStudioBundlesDoclean"; //$NON-NLS-1$
+    static public final String PROP_TALEND_BUNDLES_DO_CLEAN = "-talend.studio.bundles.doclean"; //$NON-NLS-1$
 
     /**
      * for relaunch of the plugins when relaunching the Studio
@@ -107,15 +112,38 @@ public class EclipseCommandLine {
      * later.
      */
     static public final String TALEND_SHOW_JOB_TYPE_COMMAND = "--showJobType"; //$NON-NLS-1$
+    
+    static private final Set<String> TALEND_ARGS = new HashSet<String>();
+    
+    static {
+        TALEND_ARGS.add(TALEND_CLEAN_UNINSTALLED_BUNDLES);
+        TALEND_ARGS.add(ARG_TALEND_BUNDLES_CLEANED);
+        TALEND_ARGS.add(PROP_TALEND_BUNDLES_DO_CLEAN);
+        TALEND_ARGS.add(TALEND_RELOAD_COMMAND);
+    }
 
     static public void updateOrCreateExitDataPropertyWithCommand(String command, String value, boolean delete) {
         updateOrCreateExitDataPropertyWithCommand(command, value, delete, false);
     }
 
+    public static String getTalendArgProp(String argName) {
+        if (TALEND_ARGS.contains(argName)) {
+            return argName.replace("-", "");
+        }
+        return null;
+    }
+    
     public static String getEclipseArgument(String argName) {
         if (argName == null || argName.trim().isEmpty()) {
             return null;
         }
+
+        if (TALEND_ARGS.contains(argName)) {
+            String sysProp = getTalendArgProp(argName);
+            ExceptionHandler.logDebug("argName: " + argName + ", sysProp: " + sysProp + ", value: " + System.getProperty(sysProp));
+            return System.getProperty(sysProp);
+        }
+        
         String[] commandLineArgs = Platform.getCommandLineArgs();
         if (commandLineArgs == null || commandLineArgs.length <= 0) {
             return null;
@@ -139,6 +167,17 @@ public class EclipseCommandLine {
      * @param isOption this flag used to trigger for the option command without any arguments.
      */
     static public void updateOrCreateExitDataPropertyWithCommand(String command, String value, boolean delete, boolean isOption) {
+        if (TALEND_ARGS.contains(command)) {
+            String prop = getTalendArgProp(command);
+            ExceptionHandler.logDebug("command: " + command + ", prop: " + prop + ", value: " + value + ", delete: " + delete);
+            if (delete) {
+                System.clearProperty(prop);
+            } else if (value != null) {
+                System.setProperty(prop, value);
+            }
+            return;
+        }
+
         boolean isValueNull = false;
         if (value == null || "".equals(value)) { //$NON-NLS-1$
             isValueNull = true;
@@ -192,8 +231,7 @@ public class EclipseCommandLine {
                                 + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE)
                                 + currentProperty.substring(indexOfVmArgs);
                     } else {// vmargs command not found so don't know where to set it to throw Exception
-                        currentProperty = currentProperty + command + EclipseCommandLine.NEW_LINE + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE);
-                        //                        throw new IllegalArgumentException("the property :" + org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY + "must constain " + EclipseCommandLine.CMD_VMARGS);
+                        throw new IllegalArgumentException("the property :" + org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY + "must constain " + EclipseCommandLine.CMD_VMARGS);
                     }
                 }
             }
@@ -264,7 +302,8 @@ public class EclipseCommandLine {
         }
         
         String exitData = removeDuplicated(result).toString();
-        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY, exitData);
+        ExceptionHandler.logDebug("exitData: " + exitData);
+        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY,exitData);
     }
     
     private static StringBuilder removeDuplicated(StringBuffer sb) {
@@ -279,6 +318,9 @@ public class EclipseCommandLine {
                     t.nextElement();
                     add = false;
                 }
+            } else if (ele.equals(EclipseCommandLine.CMD_VMARGS)) {
+                add = false;
+                break;
             }
 
             if (add) {
