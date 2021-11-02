@@ -107,13 +107,13 @@ public class EclipseCommandLineTest {
     public void testArgumentWithWhitespace() {
         String studioInstallationFolder = "C:\\Folder with whitespace\\Studio";
         String expectFolder = "'C:\\\\Folder with whitespace\\\\Studio'";
-        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talendLicensePath", studioInstallationFolder, false);
+        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talend.licence.path", studioInstallationFolder, false);
         Assert.assertTrue(
                 System.getProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY).contains(expectFolder));
 
         studioInstallationFolder = "/user/home/talend/download/Folder with whitespace";
         expectFolder = "'" + studioInstallationFolder + "'";
-        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talendLicensePath", studioInstallationFolder, false);
+        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talend.licence.path", studioInstallationFolder, false);
         Assert.assertTrue(
                 System.getProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY).contains(expectFolder));
     }
@@ -122,13 +122,13 @@ public class EclipseCommandLineTest {
     public void testArgumentWithoutWhitespace() {
         String studioInstallationFolder = "C:\\FolderWithoutWhitespace\\Studio";
         String expectFolder = studioInstallationFolder;
-        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talendLicensePath", studioInstallationFolder, false);
+        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talend.licence.path", studioInstallationFolder, false);
         Assert.assertTrue(
                 System.getProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY).contains(expectFolder));
 
         studioInstallationFolder = "/user/home/talend/download/FolderWithWhitespace";
         expectFolder = studioInstallationFolder;
-        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talendLicensePath", studioInstallationFolder, false);
+        EclipseCommandLine.updateOrCreateExitDataPropertyWithCommand("-talend.licence.path", studioInstallationFolder, false);
         Assert.assertTrue(
                 System.getProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY).contains(expectFolder));
     }

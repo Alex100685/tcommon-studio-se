@@ -58,7 +58,7 @@ public class EclipseCommandLine {
      */
     static public final String TALEND_PROJECT_TYPE_COMMAND = "-talendProjectType"; //$NON-NLS-1$
 
-    static public final String TALEND_LICENCE_PATH = "talendLicensePath"; //$NON-NLS-1$
+    static public final String TALEND_LICENCE_PATH = "talend.license.path"; //$NON-NLS-1$
 
     static public final String ARG_TALEND_LICENCE_PATH = "-" + TALEND_LICENCE_PATH; //$NON-NLS-1$
 
