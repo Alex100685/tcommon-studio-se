@@ -71,6 +71,10 @@ public class PendoTrackSender {
 
     private static final String HEAD_PENDO_KEY = "x-pendo-integration-key";
 
+    private static final String FEATURE_PREFIX = "org.talend.lite.";
+
+    private static final String FEATURE_TAIL = ".feature.feature.group";
+
     private static PendoTrackSender instance;
 
     private static String adminUrl;
@@ -171,7 +175,17 @@ public class PendoTrackSender {
         List<String> enabledFeatures = new ArrayList<String>();
         IStudioLiteP2Service studioLiteP2Service = IStudioLiteP2Service.get();
         if (studioLiteP2Service != null) {
-            enabledFeatures.addAll(studioLiteP2Service.getCurrentProjectEnabledFeatures());
+            List<String> enabledFeaturesList = studioLiteP2Service.getCurrentProjectEnabledFeatures();
+            enabledFeaturesList.stream().forEach(feature -> {
+                String result = feature;
+                if (result.startsWith(FEATURE_PREFIX)) {
+                    result = result.substring(FEATURE_PREFIX.toCharArray().length);
+                }
+                if (result.endsWith(FEATURE_TAIL)) {
+                    result = result.substring(0, result.lastIndexOf(FEATURE_TAIL));
+                }
+                enabledFeatures.add(result);
+            });
         }
         PendoLoginProperties loginEvent = new PendoLoginProperties();
         loginEvent.setStudioVersion(VersionUtils.getInternalMajorVersion());
