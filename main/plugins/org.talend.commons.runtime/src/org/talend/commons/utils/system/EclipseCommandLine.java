@@ -21,13 +21,11 @@
 // ============================================================================
 package org.talend.commons.utils.system;
 
-import java.io.StringReader;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Platform;
-import org.talend.commons.exception.ExceptionHandler;
 
 /**
  * Creates and updates properties for the eclipse commandline in case of relaunch <br/>
@@ -58,7 +56,7 @@ public class EclipseCommandLine {
      */
     static public final String TALEND_PROJECT_TYPE_COMMAND = "-talendProjectType"; //$NON-NLS-1$
 
-    static public final String TALEND_LICENCE_PATH = "talend.license.path"; //$NON-NLS-1$
+    static public final String TALEND_LICENCE_PATH = "talend.licence.path"; //$NON-NLS-1$
 
     static public final String ARG_TALEND_LICENCE_PATH = "-" + TALEND_LICENCE_PATH; //$NON-NLS-1$
 
@@ -266,9 +264,6 @@ public class EclipseCommandLine {
         }
         
         String exitData = removeDuplicated(result).toString();
-        ExceptionHandler.log("exitData: " + exitData);
-//        Exception e = new Exception("exitData debug");
-//        ExceptionHandler.process(e);
         System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY, exitData);
     }
     
@@ -284,8 +279,6 @@ public class EclipseCommandLine {
                     t.nextElement();
                     add = false;
                 }
-            } else if (ele.equals(EclipseCommandLine.CMD_VMARGS)) {
-                break;
             }
 
             if (add) {
