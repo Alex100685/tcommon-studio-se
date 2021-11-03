@@ -21,13 +21,28 @@
 // ============================================================================
 package org.talend.commons.utils.system;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashSet;
+import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.osgi.service.datalocation.Location;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Filter;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.util.tracker.ServiceTracker;
 import org.talend.commons.exception.ExceptionHandler;
 
 /**
@@ -113,6 +128,12 @@ public class EclipseCommandLine {
      */
     static public final String TALEND_SHOW_JOB_TYPE_COMMAND = "--showJobType"; //$NON-NLS-1$
     
+    private static final String HEX_STRING = "0123456789ABCDEF";
+    
+    public static final String SCHEME_FILE = "file"; //$NON-NLS-1$
+
+    private static final String UNC_PREFIX = "//"; //$NON-NLS-1$
+    
     static private final Set<String> TALEND_ARGS = new HashSet<String>();
     
     static {
@@ -126,22 +147,14 @@ public class EclipseCommandLine {
         updateOrCreateExitDataPropertyWithCommand(command, value, delete, false);
     }
 
-    public static String getTalendArgProp(String argName) {
-        if (TALEND_ARGS.contains(argName)) {
-            return argName.replace("-", "");
-        }
-        return null;
-    }
-    
     public static String getEclipseArgument(String argName) {
         if (argName == null || argName.trim().isEmpty()) {
             return null;
         }
 
-        if (TALEND_ARGS.contains(argName)) {
-            String sysProp = getTalendArgProp(argName);
-            ExceptionHandler.logDebug("argName: " + argName + ", sysProp: " + sysProp + ", value: " + System.getProperty(sysProp));
-            return System.getProperty(sysProp);
+        if (isWindows() && !isPoweredByTalend() && TALEND_ARGS.contains(argName)) {
+            ExceptionHandler.logDebug("argName: " + argName + ", sysProp: " + argName + ", value: " + System.getProperty(argName));
+            return System.getProperty(argName);
         }
         
         String[] commandLineArgs = Platform.getCommandLineArgs();
@@ -157,6 +170,152 @@ public class EclipseCommandLine {
         return null;
     }
 
+    private static boolean isPoweredByTalend() {
+        return !Platform.getProduct().getId().equals("org.talend.rcp.branding.jetl.product") && !Platform.getProduct().getId().equals("org.talend.rcp.branding.jetl.bigdata.product");
+    }
+    
+    private static boolean isWindows() {
+        return System.getProperty("os.name").startsWith("Windows");
+    }
+    
+    private static void updateConfigIni(String command, String value, boolean delete) {
+        Properties p = loadConfigIni();
+
+        if (delete) {
+            p.remove(command);
+        } else {
+            p.put(command, value);
+        }
+        try {
+            File f = getConfigFile();
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                p.store(fos, "updated " + command);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+    
+    private static Properties loadConfigIni() {
+        Properties p = new Properties();
+        try {
+            File f = getConfigFile();
+            try (FileInputStream fis = new FileInputStream(f)) {
+                p.load(fis);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return p;
+    }
+    
+    private static String decode(String bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(bytes.length() / 2);
+        for (int i = 0; i < bytes.length(); i += 2) {
+            baos.write((HEX_STRING.indexOf(bytes.charAt(i)) << 4 | HEX_STRING.indexOf(bytes.charAt(i + 1))));
+        }
+        return new String(baos.toByteArray());
+    }
+    
+    private static File getConfigFile() throws URISyntaxException {
+        // configuration/config.ini
+        File iniFile = new File(getConfigurationFolder(), decode("636F6E6669672E696E69")); //$NON-NLS-1$
+
+        return iniFile;
+    }
+
+    private static Location getConfigLocation(BundleContext context) {
+        Filter filter = null;
+        try {
+            filter = context.createFilter(Location.CONFIGURATION_FILTER);
+        } catch (InvalidSyntaxException e) {
+            // should not happen
+        }
+        ServiceTracker configLocationTracker = new ServiceTracker(context, filter, null);
+        configLocationTracker.open();
+        try {
+            return (Location) configLocationTracker.getService();
+        } finally {
+            configLocationTracker.close();
+        }
+    }
+    
+    /**
+     * Returns the URL as a URI. This method will handle broken URLs that are not properly encoded (for example they
+     * contain unencoded space characters).
+     */
+    private static URI toURI(URL url) throws URISyntaxException {
+        // URL behaves differently across platforms so for file: URLs we parse from string form
+        if (SCHEME_FILE.equals(url.getProtocol())) {
+            String pathString = url.toExternalForm().substring(5);
+            // ensure there is a leading slash to handle common malformed URLs such as file:c:/tmp
+            if (pathString.indexOf('/') != 0)
+                pathString = '/' + pathString;
+            else if (pathString.startsWith(UNC_PREFIX) && !pathString.startsWith(UNC_PREFIX, 2)) {
+                // URL encodes UNC path with two slashes, but URI uses four (see bug 207103)
+                pathString = UNC_PREFIX + pathString;
+            }
+            return new URI(SCHEME_FILE, null, pathString, null);
+        }
+        try {
+            return new URI(url.toExternalForm());
+        } catch (URISyntaxException e) {
+            // try multi-argument URI constructor to perform encoding
+            return new URI(url.getProtocol(), url.getUserInfo(), url.getHost(), url.getPort(), url.getPath(), url.getQuery(),
+                    url.getRef());
+        }
+    }
+
+    private static File toFile(URI uri) {
+        try {
+            if (!SCHEME_FILE.equalsIgnoreCase(uri.getScheme()))
+                return null;
+            // assume all illegal characters have been properly encoded, so use URI class to unencode
+            return new File(uri);
+        } catch (IllegalArgumentException e) {
+            // File constructor does not support non-hierarchical URI
+            String path = uri.getPath();
+            // path is null for non-hierarchical URI such as file:c:/tmp
+            if (path == null)
+                path = uri.getSchemeSpecificPart();
+            return new File(path);
+        }
+    }
+    
+    private static File getConfigurationFolder() {
+        BundleContext configuratorBundleContext = getCurrentBundleContext();
+        final URL url = getConfigLocation(configuratorBundleContext).getURL();
+        try {
+            return toFile(toURI(url));
+        } catch (URISyntaxException e) {
+            //
+        }
+        return null;
+    }
+    
+ // always return a valid bundlesContext or throw a runtimeException
+    private static BundleContext getCurrentBundleContext() {
+        Bundle bundle = FrameworkUtil.getBundle(EclipseCommandLine.class);
+        if (bundle != null) {
+            BundleContext bundleContext = bundle.getBundleContext();
+            if (bundleContext != null) {
+                return bundleContext;
+            } else {
+                throw new RuntimeException(
+                        "could not find current BundleContext, this should never happen, check that the bunlde is activated when this class is accessed");
+            }
+        } else {
+            throw new RuntimeException(
+                    "could not find current Bundle, this should never happen, check that the bunlde is activated when this class is accessed");
+        }
+    }
+    
     /**
      * this creates or updates the org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY by adding or changing
      * the command with value, except if value is null then the command shall be removed.
@@ -167,17 +326,13 @@ public class EclipseCommandLine {
      * @param isOption this flag used to trigger for the option command without any arguments.
      */
     static public void updateOrCreateExitDataPropertyWithCommand(String command, String value, boolean delete, boolean isOption) {
-        if (TALEND_ARGS.contains(command)) {
-            String prop = getTalendArgProp(command);
-            ExceptionHandler.logDebug("command: " + command + ", prop: " + prop + ", value: " + value + ", delete: " + delete);
-            if (delete) {
-                System.clearProperty(prop);
-            } else if (value != null) {
-                System.setProperty(prop, value);
-            }
+        if (isWindows() && !isPoweredByTalend() && TALEND_ARGS.contains(command)) {
+            ExceptionHandler.logDebug("command: " + command + ", prop: " + command + ", value: " + value + ", delete: " + delete);
+            updateConfigIni(command, value, delete);
             return;
         }
-
+        
+        
         boolean isValueNull = false;
         if (value == null || "".equals(value)) { //$NON-NLS-1$
             isValueNull = true;
@@ -231,6 +386,8 @@ public class EclipseCommandLine {
                                 + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE)
                                 + currentProperty.substring(indexOfVmArgs);
                     } else {// vmargs command not found so don't know where to set it to throw Exception
+//                        currentProperty = currentProperty.substring(0, indexOfVmArgs) + command + EclipseCommandLine.NEW_LINE
+//                                + (isValueNull ? "" : value + EclipseCommandLine.NEW_LINE);
                         throw new IllegalArgumentException("the property :" + org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY + "must constain " + EclipseCommandLine.CMD_VMARGS);
                     }
                 }
