@@ -202,10 +202,6 @@ public class PendoTrackSender {
 
         ObjectMapper mapper = new ObjectMapper();
         String content = mapper.writeValueAsString(entity);
-        String debugProperty = System.getProperty("talend.pendo.debug");
-        if (StringUtils.isNotBlank(debugProperty) && Boolean.valueOf(debugProperty)) {
-            ExceptionHandler.log(content);
-        }
         return content;
     }
 
