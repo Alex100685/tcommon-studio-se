@@ -459,9 +459,13 @@ public class EclipseCommandLine {
             }
         }
         
-        String exitData = removeDuplicated(result).toString();
+        String exitData = result.toString();
+        
+        if (isWindows() && !isPoweredByTalend()) {
+            exitData = removeDuplicated(result).toString();
+        }
         ExceptionHandler.logDebug("exitData: " + exitData);
-        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY,exitData);
+        System.setProperty(org.eclipse.equinox.app.IApplicationContext.EXIT_DATA_PROPERTY, exitData);
     }
     
     private static StringBuilder removeDuplicated(StringBuffer sb) {
