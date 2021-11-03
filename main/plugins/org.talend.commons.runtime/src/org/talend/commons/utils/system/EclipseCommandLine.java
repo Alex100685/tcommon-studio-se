@@ -152,9 +152,10 @@ public class EclipseCommandLine {
             return null;
         }
 
-        if (isWindows() && !isPoweredByTalend() && TALEND_ARGS.contains(argName)) {
+        if (isWindows() && TALEND_ARGS.contains(argName) && !isPoweredByTalend()) {
             ExceptionHandler.logDebug("argName: " + argName + ", sysProp: " + argName + ", value: " + System.getProperty(argName));
-            return System.getProperty(argName);
+            Properties p = loadConfigIni();
+            return p.getProperty(argName);
         }
         
         String[] commandLineArgs = Platform.getCommandLineArgs();
@@ -326,7 +327,7 @@ public class EclipseCommandLine {
      * @param isOption this flag used to trigger for the option command without any arguments.
      */
     static public void updateOrCreateExitDataPropertyWithCommand(String command, String value, boolean delete, boolean isOption) {
-        if (isWindows() && !isPoweredByTalend() && TALEND_ARGS.contains(command)) {
+        if (isWindows() && TALEND_ARGS.contains(command) && !isPoweredByTalend()) {
             ExceptionHandler.logDebug("command: " + command + ", prop: " + command + ", value: " + value + ", delete: " + delete);
             updateConfigIni(command, value, delete);
             return;
